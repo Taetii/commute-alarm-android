@@ -67,10 +67,15 @@ fun HomeScreen() {
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Current Time (static - updates on recomposition)
-        val currentTime = remember { LocalTime.now() }
+        // Real-time Clock
+        val currentTime by produceState(initialValue = LocalTime.now()) {
+            while (true) {
+                value = LocalTime.now()
+                kotlinx.coroutines.delay(1000L)
+            }
+        }
         Text(
-            text = currentTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+            text = currentTime.format(DateTimeFormatter.ofPattern("HH:mm:ss")),
             style = MaterialTheme.typography.headlineLarge,
             color = Color.White.copy(alpha = 0.9f),
             fontWeight = FontWeight.Light,
