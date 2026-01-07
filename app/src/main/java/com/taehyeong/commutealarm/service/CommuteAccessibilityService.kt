@@ -120,17 +120,29 @@ class CommuteAccessibilityService : AccessibilityService() {
                     CommuteAction.CHECK_OUT -> "퇴근하기"
                     null -> return
                 }
+                val oppositeText = when (pendingAction) {
+                    CommuteAction.CHECK_IN -> "퇴근하기"  // 출근 시도 시 퇴근하기가 보이면 이미 출근함
+                    CommuteAction.CHECK_OUT -> "출근하기"  // 퇴근 시도 시 출근하기가 보이면 이미 퇴근함
+                    null -> return
+                }
+                
                 Log.d(TAG, "Step 3: Looking for $targetText button")
+                
                 if (clickByText(targetText)) {
+                    // 정상: 원하는 버튼 클릭 성공
                     currentStep++
                     scheduleNextStep(2000)
+                } else if (hasText(oppositeText)) {
+                    // 이미 체크함: 반대 버튼이 보임 → 앱 종료
+                    Log.d(TAG, "Step 3: Already checked! Found $oppositeText instead of $targetText. Closing app.")
+                    onAlreadyChecked()
                 } else {
                     retryOrFail()
                 }
             }
             3 -> {
-                // Step 4: Success - take screenshot and share
-                Log.d(TAG, "Step 4: Automation complete, taking screenshot")
+                // Step 4: Success
+                Log.d(TAG, "Step 4: Automation complete!")
                 onSuccess()
             }
         }
@@ -163,12 +175,32 @@ class CommuteAccessibilityService : AccessibilityService() {
         FailureNotificationManager.startFailureNotifications(this)
     }
     
+    private fun onAlreadyChecked() {
+        Log.d(TAG, "User already checked in/out. Closing Hiworks app.")
+        resetState()
+        FailureNotificationManager.cancelFailureNotifications(this)
+        // Press back button to close Hiworks app
+        performGlobalAction(GLOBAL_ACTION_BACK)
+        handler.postDelayed({
+            performGlobalAction(GLOBAL_ACTION_HOME)
+        }, 500)
+    }
+    
     private fun resetState() {
         currentStep = 0
         retryCount = 0
         pendingAction = null
         hasStarted = false
         handler.removeCallbacksAndMessages(null)
+    }
+    
+    // Check if text exists on screen (without clicking)
+    private fun hasText(text: String): Boolean {
+        val rootNode = rootInActiveWindow ?: return false
+        val nodes = rootNode.findAccessibilityNodeInfosByText(text)
+        val exists = nodes.isNotEmpty()
+        nodes.forEach { it.recycle() }
+        return exists
     }
     
     private fun clickByText(text: String): Boolean {
