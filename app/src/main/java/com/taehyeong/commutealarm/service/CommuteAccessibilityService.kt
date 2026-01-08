@@ -165,19 +165,21 @@ class CommuteAccessibilityService : AccessibilityService() {
     private fun onSuccess() {
         Log.d(TAG, "Commute automation successful!")
         resetState()
-        // TODO: Take screenshot and share
+        com.taehyeong.commutealarm.util.ScreenWakeUtil.releaseWakeLock()
         FailureNotificationManager.cancelFailureNotifications(this)
     }
     
     private fun onFailure() {
         Log.e(TAG, "Commute automation failed at step $currentStep")
         resetState()
+        com.taehyeong.commutealarm.util.ScreenWakeUtil.releaseWakeLock()
         FailureNotificationManager.startFailureNotifications(this)
     }
     
     private fun onAlreadyChecked() {
         Log.d(TAG, "User already checked in/out. Closing Hiworks app.")
         resetState()
+        com.taehyeong.commutealarm.util.ScreenWakeUtil.releaseWakeLock()
         FailureNotificationManager.cancelFailureNotifications(this)
         // Press back button to close Hiworks app
         performGlobalAction(GLOBAL_ACTION_BACK)
