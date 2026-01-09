@@ -54,11 +54,15 @@ object SettingsRepository {
             preferences[CHECK_OUT_MINUTE] = settings.checkOutMinute
             preferences[ENABLED_DAYS] = settings.enabledDays.map { it.toString() }.toSet()
         }
+        // Schedule or cancel alarms based on settings
+        com.taehyeong.commutealarm.util.CommuteScheduler.scheduleAlarms(context)
     }
     
     suspend fun setEnabled(context: Context, enabled: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[IS_ENABLED] = enabled
         }
+        // Schedule or cancel alarms based on enabled state
+        com.taehyeong.commutealarm.util.CommuteScheduler.scheduleAlarms(context)
     }
 }

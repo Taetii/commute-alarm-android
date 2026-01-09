@@ -84,32 +84,34 @@ object CommuteScheduler {
             .toInstant()
             .toEpochMilli()
         
+        // Show pending alarm intent (for lock screen display)
+        val showIntent = Intent(context, com.taehyeong.commutealarm.MainActivity::class.java)
+        val showPendingIntent = PendingIntent.getActivity(
+            context,
+            requestCode + 100,
+            showIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (alarmManager.canScheduleExactAlarms()) {
-                    alarmManager.setExactAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerMillis,
-                        pendingIntent
-                    )
-                } else {
-                    // Fall back to inexact alarm
-                    alarmManager.setAndAllowWhileIdle(
-                        AlarmManager.RTC_WAKEUP,
-                        triggerMillis,
-                        pendingIntent
-                    )
-                }
-            } else {
+            // Use setAlarmClock - this is treated EXACTLY like the system alarm clock
+            // and will ALWAYS wake the screen and show on lock screen
+            val alarmClockInfo = AlarmManager.AlarmClockInfo(triggerMillis, showPendingIntent)
+            alarmManager.setAlarmClock(alarmClockInfo, pendingIntent)
+            Log.d(TAG, "★ Scheduled ALARM CLOCK: $action at $triggerDateTime ★")
+        } catch (e: SecurityException) {
+            Log.e(TAG, "Failed to schedule alarm clock", e)
+            // Fallback to setExactAndAllowWhileIdle
+            try {
                 alarmManager.setExactAndAllowWhileIdle(
                     AlarmManager.RTC_WAKEUP,
                     triggerMillis,
                     pendingIntent
                 )
+                Log.d(TAG, "Fallback: Scheduled exact alarm: $action at $triggerDateTime")
+            } catch (e2: Exception) {
+                Log.e(TAG, "Failed to schedule any alarm", e2)
             }
-            Log.d(TAG, "Scheduled alarm: $action at $triggerDateTime")
-        } catch (e: SecurityException) {
-            Log.e(TAG, "Failed to schedule exact alarm", e)
         }
     }
     

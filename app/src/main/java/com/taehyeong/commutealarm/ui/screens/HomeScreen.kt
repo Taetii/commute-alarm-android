@@ -21,8 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.taehyeong.commutealarm.R
+import com.taehyeong.commutealarm.data.CommuteSettings
+import com.taehyeong.commutealarm.data.SettingsRepository
 import com.taehyeong.commutealarm.service.CommuteAccessibilityService
 import com.taehyeong.commutealarm.ui.theme.*
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
@@ -125,9 +128,21 @@ fun HomeScreen() {
                     color = Color.White,
                     style = MaterialTheme.typography.titleMedium
                 )
+                val scope = rememberCoroutineScope()
                 Switch(
                     checked = isEnabled,
-                    onCheckedChange = { isEnabled = it },
+                    onCheckedChange = { newValue ->
+                        isEnabled = newValue
+                        scope.launch {
+                            SettingsRepository.saveSettings(context, CommuteSettings(
+                                isEnabled = newValue,
+                                checkInHour = checkInTime.hour,
+                                checkInMinute = checkInTime.minute,
+                                checkOutHour = checkOutTime.hour,
+                                checkOutMinute = checkOutTime.minute
+                            ))
+                        }
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = AccentGreen,
                         checkedTrackColor = AccentGreen.copy(alpha = 0.5f)
@@ -219,13 +234,26 @@ fun HomeScreen() {
         }
     }
     
+    // Coroutine scope for saving settings
+    val coroutineScope = rememberCoroutineScope()
+    
     // Time Picker Dialogs
     if (showCheckInPicker) {
         TimePickerDialog(
             initialTime = checkInTime,
-            onConfirm = { 
-                checkInTime = it
+            onConfirm = { newTime ->
+                checkInTime = newTime
                 showCheckInPicker = false
+                // Save settings and schedule alarm
+                coroutineScope.launch {
+                    SettingsRepository.saveSettings(context, CommuteSettings(
+                        isEnabled = isEnabled,
+                        checkInHour = newTime.hour,
+                        checkInMinute = newTime.minute,
+                        checkOutHour = checkOutTime.hour,
+                        checkOutMinute = checkOutTime.minute
+                    ))
+                }
             },
             onDismiss = { showCheckInPicker = false }
         )
@@ -234,9 +262,19 @@ fun HomeScreen() {
     if (showCheckOutPicker) {
         TimePickerDialog(
             initialTime = checkOutTime,
-            onConfirm = { 
-                checkOutTime = it
+            onConfirm = { newTime ->
+                checkOutTime = newTime
                 showCheckOutPicker = false
+                // Save settings and schedule alarm
+                coroutineScope.launch {
+                    SettingsRepository.saveSettings(context, CommuteSettings(
+                        isEnabled = isEnabled,
+                        checkInHour = checkInTime.hour,
+                        checkInMinute = checkInTime.minute,
+                        checkOutHour = newTime.hour,
+                        checkOutMinute = newTime.minute
+                    ))
+                }
             },
             onDismiss = { showCheckOutPicker = false }
         )

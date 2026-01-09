@@ -164,9 +164,21 @@ class CommuteAccessibilityService : AccessibilityService() {
     
     private fun onSuccess() {
         Log.d(TAG, "Commute automation successful!")
+        val action = pendingAction
         resetState()
         com.taehyeong.commutealarm.util.ScreenWakeUtil.releaseWakeLock()
         FailureNotificationManager.cancelFailureNotifications(this)
+        
+        // Show success notification
+        val message = when (action) {
+            CommuteAction.CHECK_IN -> "출근 체크가 완료되었습니다 ✓"
+            CommuteAction.CHECK_OUT -> "퇴근 체크가 완료되었습니다 ✓"
+            null -> "체크가 완료되었습니다 ✓"
+        }
+        showSuccessNotification(message)
+        
+        // Close Hiworks app and go home
+        closeHiworksApp()
     }
     
     private fun onFailure() {
@@ -174,18 +186,67 @@ class CommuteAccessibilityService : AccessibilityService() {
         resetState()
         com.taehyeong.commutealarm.util.ScreenWakeUtil.releaseWakeLock()
         FailureNotificationManager.startFailureNotifications(this)
+        
+        // Close Hiworks app
+        closeHiworksApp()
     }
     
     private fun onAlreadyChecked() {
+        val action = pendingAction
         Log.d(TAG, "User already checked in/out. Closing Hiworks app.")
         resetState()
         com.taehyeong.commutealarm.util.ScreenWakeUtil.releaseWakeLock()
         FailureNotificationManager.cancelFailureNotifications(this)
+        
+        // Show already checked notification
+        val message = when (action) {
+            CommuteAction.CHECK_IN -> "이미 출근 체크되어 있습니다"
+            CommuteAction.CHECK_OUT -> "이미 퇴근 체크되어 있습니다"
+            null -> "이미 체크되어 있습니다"
+        }
+        showSuccessNotification(message)
+        
+        // Close Hiworks app
+        closeHiworksApp()
+    }
+    
+    private fun closeHiworksApp() {
         // Press back button to close Hiworks app
         performGlobalAction(GLOBAL_ACTION_BACK)
         handler.postDelayed({
             performGlobalAction(GLOBAL_ACTION_HOME)
         }, 500)
+    }
+    
+    private fun showSuccessNotification(message: String) {
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+        
+        // Create notification channel
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                "success_channel",
+                "체크 완료",
+                android.app.NotificationManager.IMPORTANCE_DEFAULT
+            )
+            notificationManager.createNotificationChannel(channel)
+        }
+        
+        val notification = androidx.core.app.NotificationCompat.Builder(this, "success_channel")
+            .setSmallIcon(android.R.drawable.ic_menu_today)
+            .setContentTitle("Hiworks-checker")
+            .setContentText(message)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+        
+        // Cancel the "진행 중" notification and show success
+        notificationManager.cancel(8888) // Cancel the progress notification
+        notificationManager.notify(8889, notification)
+        
+        // Auto-dismiss success notification after 5 seconds
+        handler.postDelayed({
+            notificationManager.cancel(8889)
+        }, 5000)
     }
     
     private fun resetState() {

@@ -1,6 +1,9 @@
 package com.taehyeong.commutealarm.ui.screens
 
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -34,23 +37,28 @@ fun HelpScreen() {
             .verticalScroll(scrollState)
     ) {
         Text(
-            text = "도움말",
+            text = "📋 초기 설정 가이드",
             style = MaterialTheme.typography.headlineMedium,
             color = Color.White,
             fontWeight = FontWeight.Bold
         )
         
+        Text(
+            text = "앱이 잠금화면에서 정상 작동하려면 아래 설정이 필요합니다.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Color.White.copy(alpha = 0.7f)
+        )
+        
         Spacer(modifier = Modifier.height(24.dp))
         
-        // 접근성 서비스 설정 안내
+        // 1. 접근성 서비스
         HelpCard(
-            title = "1. 접근성 서비스 활성화",
+            title = "1️⃣ 접근성 서비스 활성화 (필수)",
             content = """
-                앱이 Hiworks를 자동으로 조작하려면 접근성 서비스가 필요합니다.
+                Hiworks 앱을 자동으로 조작하려면 접근성 서비스가 필요합니다.
                 
-                설정 방법:
-                1. 아래 "접근성 설정 열기" 버튼을 누르세요
-                2. "설치된 앱" 또는 "다운로드된 앱" 찾기
+                1. 아래 버튼을 눌러 접근성 설정으로 이동
+                2. "설치된 앱" 또는 "다운로드된 앱" 선택
                 3. "Hiworks-checker" 찾아서 선택
                 4. 토글을 켜서 활성화
                 5. "허용" 확인
@@ -72,29 +80,87 @@ fun HelpScreen() {
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        // Android 14+ 안내
+        // 2. 배터리 최적화 제외
         HelpCard(
-            title = "2. Android 14 이상 사용자",
+            title = "2️⃣ 배터리 최적화 제외 (필수)",
             content = """
-                Android 14부터 보안이 강화되어 접근성 서비스 활성화가 막힐 수 있습니다.
+                배터리 최적화가 켜져 있으면 알람이 정확한 시간에 작동하지 않을 수 있습니다.
                 
-                해결 방법:
-                1. PC에 USB로 폰 연결
-                2. ADB 명령어 실행:
-                
-                adb shell settings put secure enabled_accessibility_services com.taehyeong.commutealarm/com.taehyeong.commutealarm.service.CommuteAccessibilityService
+                1. 아래 버튼을 눌러 앱 정보로 이동
+                2. "배터리" 메뉴 선택
+                3. "제한 없음" 또는 "최적화 안함" 선택
             """.trimIndent()
         )
         
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Button(
+            onClick = {
+                // Go to app details settings - works on all phones
+                val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.data = Uri.parse("package:${context.packageName}")
+                context.startActivity(intent)
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("배터리 최적화 설정 열기", modifier = Modifier.padding(8.dp))
+        }
+        
         Spacer(modifier = Modifier.height(24.dp))
         
-        // 사용 방법
+        // 3. 잠금화면 설정
         HelpCard(
-            title = "3. 사용 방법",
+            title = "3️⃣ 잠금화면 루틴 설정 (지문/Face ID 사용 시)",
             content = """
-                • 출근/퇴근 시간을 설정하세요
-                • 활성화 토글이 켜져 있어야 합니다
-                • 설정된 시간에 자동으로 Hiworks 앱을 열고 출퇴근 버튼을 클릭합니다
+                지문/Face ID 잠금이 있으면 화면이 켜져도 잠금이 풀리지 않아 자동화가 진행되지 않습니다.
+                
+                삼성 "모드 및 루틴" 설정:
+                
+                [루틴 1: 잠금 해제]
+                • 조건: 시간 (출근 5분 전, 예: 08:25)
+                • 동작: 잠금화면 유형 → "없음" 또는 "스와이프"
+                
+                [루틴 2: 잠금 복원] 
+                • 조건: 시간 (출근 후, 예: 08:35)
+                • 동작: 잠금화면 유형 → 기존 방식 (지문 등)
+                
+                ※ 퇴근 시간도 동일하게 설정하세요.
+                ※ 설정 → 모드 및 루틴 → 루틴 탭에서 추가합니다.
+            """.trimIndent()
+        )
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        Button(
+            onClick = {
+                // Try to open Modes and Routines, fallback to main settings
+                try {
+                    val intent = Intent()
+                    intent.setClassName("com.samsung.android.app.routines", "com.samsung.android.app.routines.MainActivity")
+                    context.startActivity(intent)
+                } catch (e: Exception) {
+                    context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Text("모드 및 루틴 열기 (삼성)", modifier = Modifier.padding(8.dp))
+        }
+        
+        Spacer(modifier = Modifier.height(24.dp))
+        
+        // 5. 사용 방법
+        HelpCard(
+            title = "📱 사용 방법",
+            content = """
+                1. 출근/퇴근 시간을 설정하세요
+                2. 활성화 토글이 켜져 있어야 합니다
+                3. 설정된 시간에 자동으로 Hiworks 앱을 열고 출퇴근 버튼을 클릭합니다
+                4. 이미 출퇴근을 완료한 경우 자동으로 앱을 종료합니다
                 
                 테스트:
                 "출근 체크하기" 또는 "퇴근 체크하기" 버튼으로 바로 테스트할 수 있습니다.
@@ -103,29 +169,22 @@ fun HelpScreen() {
         
         Spacer(modifier = Modifier.height(24.dp))
         
-        // 주의사항
+        // 6. 문제 해결
         HelpCard(
-            title = "⚠️ 주의사항",
-            content = """
-                • 배터리 최적화에서 이 앱을 제외해주세요
-                • 절전 모드에서는 작동하지 않을 수 있습니다
-                • 화면이 꺼진 상태에서도 알람은 작동합니다
-                • 연차나 공휴일에는 자동으로 건너뜁니다
-            """.trimIndent()
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        // 문제 해결
-        HelpCard(
-            title = "4. 문제 해결",
+            title = "🔧 문제 해결",
             content = """
                 자동화가 실패하면:
                 • 10초마다 알림이 30회 반복됩니다 (5분간)
                 • 알림을 탭하면 앱이 열립니다
                 • 수동으로 Hiworks에서 출퇴근을 처리하세요
+                
+                여전히 작동하지 않으면:
+                • 위의 1~4번 설정을 다시 확인하세요
+                • 폰을 재부팅 후 다시 시도하세요
             """.trimIndent()
         )
+        
+        Spacer(modifier = Modifier.height(24.dp))
     }
 }
 

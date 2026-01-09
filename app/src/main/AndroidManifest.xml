@@ -16,6 +16,7 @@
     <!-- Wake lock for screen off operation -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.DISABLE_KEYGUARD" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
     <application
         android:allowBackup="true"
@@ -36,6 +37,16 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        
+        <!-- Wake Activity - turns on screen over lock screen -->
+        <activity
+            android:name=".WakeActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.NoDisplay"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true" />
 
         <!-- Accessibility Service -->
         <service
@@ -56,6 +67,8 @@
             android:exported="false">
             <intent-filter>
                 <action android:name="com.taehyeong.commutealarm.COMMUTE_ALARM" />
+                <action android:name="com.taehyeong.commutealarm.CHECK_IN" />
+                <action android:name="com.taehyeong.commutealarm.CHECK_OUT" />
             </intent-filter>
         </receiver>
 
@@ -67,6 +80,16 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>
         </receiver>
+        
+        <!-- Wake Service - Foreground service for lock screen wake -->
+        <service
+            android:name=".service.WakeService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="automation" />
+        </service>
 
     </application>
 
